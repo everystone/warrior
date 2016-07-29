@@ -1,0 +1,25 @@
+Level 2
+
+It is too dark to see anything, but you smell sludge nearby.
+
+Tip: Use `warrior.feel().isEmpty()` to see if there is anything in front of you, and `warrior.attack()` to fight it. Remember, you can only do one action per turn.
+
+
+╔════════╗
+║@   s  >║
+╚════════╝
+
+  > = stairs
+  @ = Hyperion
+
+
+Warrior abilities:
+
+  warrior.walk()
+
+  warrior.attack() (NEW!)
+
+  warrior.feel() (NEW!)
+
+
+When you're done editing Player.js, run the warriorjs command again.

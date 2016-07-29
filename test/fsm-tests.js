@@ -50,8 +50,8 @@ describe('FSM System Test Suite', () => {
     fsm.addState(state2)
     expect(fsm.states.length).to.equal(2)
     expect(fsm.currentStateId).to.equal(StateId.Walking)
-    
-    
-
+    fsm.performTransition(Transition.FacedEnemy)
+    expect(fsm.currentStateId).to.equal(StateId.Attacking)
+    expect(fsm.currentState).to.equal(state2)
   })
 })

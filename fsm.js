@@ -16,7 +16,8 @@ const StateId = {
   Walking: 0,
   Resting: 1,
   Attacking: 2,
-  Escaping: 3
+  Recon: 3,
+  Escaping: 4
 }
 
 class FSM {
@@ -109,10 +110,10 @@ class FSMState {
     return StateId.NullStateId
   }
   /* Virtual methods */
-  // DoBeforeEntering () {}
-  // DoBeforeLeaving () {}
-  // Reason (Warrior) {}
-  // Act (Warrior) {}
+  DoBeforeEntering () {}
+  DoBeforeLeaving () {}
+  Reason (Warrior) {}
+  Act (Warrior) {}
 }
 
 export { Transition, StateId, FSM, FSMState }
