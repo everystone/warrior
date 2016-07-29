@@ -118,7 +118,7 @@ class Player {
   }
   setTransition (trans) {
     this.fsm.performTransition(trans)
-    console.log(`Transitioning: ${trans}`)
+    // console.log(`Transitioning: ${trans}`)
   }
   step () {
     this.steps += 1

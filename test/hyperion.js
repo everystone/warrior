@@ -17,14 +17,14 @@ const warrior = {
   walk () { this.lastUsed = 'walk' },
   attack () { this.lastUsed = 'attack' },
   rescue () { this.lastUsed = 'rescue' },
-  rest () { this.lastUsed = 'rest' },
+  rest () { this.lastUsed = 'rest'; this.hp += 2 },
   health () { return this.hp }
 }
 
-let player
-describe('Player test suite', () => {
+let player = new Player()
+describe('Player Tests', () => {
   beforeEach(() => {
-    player = new Player()
+    // player = new Player()
   })
   it('Initializes a FSM with several states', () => {
     expect(player.fsm.states.length).to.be.above(2)
@@ -33,30 +33,28 @@ describe('Player test suite', () => {
     expect(warrior.feel().isWall()).to.be.false
     expect(warrior.health()).to.equal(20)
   })
-  it('Falls back after taking damage in RestState', () => {
-    let dir = player.dir
+  it('Heals after combat', () => {
     player.steps = 2
+    // Start in state FacedEnemy
     player.setTransition(Transition.FacedEnemy)
     warrior.hp = 12
-    
+    // Because the space next to warrior is empty, he should now heal
     player.playTurn(warrior)
     expect(warrior.lastUsed).to.equal('rest')
     expect(player.fsm.currentStateId).to.equal(StateId.Resting)
-    warrior.hp = 10
-    
+  })
+  it('Escapes when taking damage while healing', () => {
+    warrior.hp = 10 // simulate archer arrow
+    let dir = player.dir
     player.playTurn(warrior)
     expect(player.fsm.currentStateId).to.equal(StateId.Escaping)
     expect(warrior.lastUsed).to.equal('walk')
     expect(player.steps).to.equal(1) // swapped
     expect(player.dir).to.not.equal(dir)
-    
-    warrior.hp = 9
+  })
+  it('Heals after successfull escape', () => {
     player.playTurn(warrior)
-    expect(player.fsm.currentStateId).to.equal(StateId.Escaping)
-    expect(player.steps).to.equal(2)
-
-
-    
-
+    expect(player.fsm.currentStateId).to.equal(StateId.Resting)
+    expect(player.hp).to.equal(12)
   })
 })
