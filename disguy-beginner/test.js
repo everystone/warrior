@@ -3,9 +3,17 @@
 import {Transition, StateId, FSM, FSMState} from './fsm'
 import { expect } from 'chai'
 
-
+let fsm
 describe('FSM System Test Suite', () => {
-
+  beforeEach(() => {
+    fsm = new FSM()
+  })
+  it('Adds a state', () => {
+    const state = new FSMState()
+    fsm.addState(state)
+    expect(fsm.states.length).to.equal(1)
+    expect(fsm.states[0]).to.equal(state)
+  })
 })
 
 let state

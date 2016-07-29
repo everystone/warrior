@@ -19,7 +19,23 @@ const StateId = {
 
 class FSM {
   constructor () {
-    this.a = 0
+    this.states = []
+    this.currentStateId = 0
+    this.currentState = {}
+  }
+  addState (state) {
+    // first state is set as active state
+    if (this.states.length === 0) {
+      this.states.push(state)
+      this.currentStateId = state.Id
+      this.currentState = state
+      return
+    }
+    // Ignore duplicates
+    if (this.states.find((s) => s.Id === state.id)) {
+      return
+    }
+    this.states.push(state)
   }
 }
 
