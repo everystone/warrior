@@ -1,25 +1,34 @@
-Level 2
+Level 7
 
-It is too dark to see anything, but you smell sludge nearby.
+You feel a wall right in front of you and an opening behind you.
 
-Tip: Use `warrior.feel().isEmpty()` to see if there is anything in front of you, and `warrior.attack()` to fight it. Remember, you can only do one action per turn.
+Tip: You are not as effective at attacking backward. Use `warrior.feel().isWall()` and `warrior.pivot()` to turn around.
 
 
-╔════════╗
-║@   s  >║
-╚════════╝
+╔══════╗
+║>a S @║
+╚══════╝
 
   > = stairs
   @ = Hyperion
+  S = thickSludge
 
 
 Warrior abilities:
 
   warrior.walk()
 
-  warrior.attack() (NEW!)
+  warrior.attack()
 
-  warrior.feel() (NEW!)
+  warrior.feel()
+
+  warrior.health()
+
+  warrior.rest()
+
+  warrior.rescue()
+
+  warrior.pivot() (NEW!)
 
 
 When you're done editing Player.js, run the warriorjs command again.

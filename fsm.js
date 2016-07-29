@@ -112,8 +112,8 @@ class FSMState {
   /* Virtual methods */
   DoBeforeEntering () {}
   DoBeforeLeaving () {}
-  Reason (Warrior) {}
-  Act (Warrior) {}
+  Reason (Warrior, player) {}
+  Act (Warrior, player) {}
 }
 
 export { Transition, StateId, FSM, FSMState }

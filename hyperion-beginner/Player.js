@@ -1,9 +1,10 @@
 const Transition = {
   NullTransition: 0,
   FacedEnemy: 1,
-  TookRangedDamage: 2,
-  IsDying: 3,
-  KilledEnemy: 4
+  Fallback: 2,
+  NeedHealing: 3,
+  KilledEnemy: 4,
+  DoneHealing: 5
 }
 const StateId = {
   NullStateId: -1,
@@ -107,25 +108,48 @@ class FSMState {
   Reason (Warrior) {}
   Act (Warrior) {}
 }
-
 class Player {
   constructor () {
     this.fsm = new FSM()
     this.setupFSM()
+    this.hp = 20
+    this.dir = 'backward'
+    this.steps = 0
   }
-  // Configures the Finite State Machine
+  setTransition (trans) {
+    this.fsm.performTransition(trans)
+    console.log(`Transitioning: ${trans}`)
+  }
+  step () {
+    this.steps += 1
+  }
+  swap () {
+    this.dir = this.dir === 'forward' ? 'backward' : 'forward'
+    this.steps = 0
+  }
   setupFSM () {
-    const walk = new WalkState()
-    walk.addTransition(Transition.FacedEnemy, StateId.Attacking)
-    const attack = new AttackState()
-    attack.addTransition(Transition.KilledEnemy, StateId.Walking)
+    const walking = new WalkState()
+    walking.addTransition(Transition.FacedEnemy, StateId.Attacking)
+    
 
-    this.fsm.addState(walk)
-    this.fsm.addState(attack)
+    const attacking = new AttackState()
+    attacking.addTransition(Transition.KilledEnemy, StateId.Walking)
+    attacking.addTransition(Transition.NeedHealing, StateId.Resting)
+    const resting = new RestState()
+    resting.addTransition(Transition.DoneHealing, StateId.Walking)
+    resting.addTransition(Transition.Fallback, StateId.Escaping)
+    const escaping = new EscapeState()
+    escaping.addTransition(Transition.NeedHealing, StateId.Resting)
+
+    this.fsm.addState(walking)
+    this.fsm.addState(attacking)
+    this.fsm.addState(resting)
+    this.fsm.addState(escaping)
   }
   playTurn (warrior) {
-    this.fsm.currentState.Reason(warrior)
-    this.fsm.currentState.Act(warrior)
+    this.fsm.currentState.Reason(warrior, this)
+    this.fsm.currentState.Act(warrior, this)
+    this.hp = warrior.health()
   }
 }
 
@@ -133,10 +157,19 @@ class WalkState extends FSMState {
   constructor () {
     super(StateId.Walking)
   }
-  Reason (warrior) {
+  Reason (warrior, player) {
+    if (warrior.feel(player.dir).isEnemy()) {
+      player.setTransition(Transition.FacedEnemy)
+    }
   }
-  Act (warrior) {
-    warrior.walk()
+  Act (warrior, player) {
+    if (warrior.feel(player.dir).isCaptive()) {
+      warrior.rescue(player.dir)
+      player.swap()
+      return
+    }
+    warrior.walk(player.dir)
+    player.step()
   }
 }
 
@@ -144,11 +177,77 @@ class AttackState extends FSMState {
   constructor () {
     super(StateId.Attacking)
   }
-  DoBeforeEntering () {}
-  DoBeforeLeaving () {}
-  Reason (warrior) {}
-  Act (warrior) {}
+  Reason (warrior, player) {
+    if (warrior.feel(player.dir).isEmpty()) {
+      // check health
+      if (warrior.health() <= 13) {
+        player.setTransition(Transition.NeedHealing)
+        return
+      }
+      player.setTransition(Transition.KilledEnemy)
+    } else if (warrior.feel(player.dir).isWall()) {
+      player.swap()
+    }
+  }
+  Act (warrior, player) {
+    warrior.attack(player.dir)
+  }
+}
+class RestState extends FSMState {
+  constructor () {
+    super(StateId.Resting)
+  }
+  Reason (warrior, player) {
+    if (warrior.health() < player.hp) {
+      // We have taken damage since last turn, most likely pesky rangers
+      // if we have less than 13 hp and there is room to escape
+      if (warrior.health() <= 10 && player.steps >= 2) {
+        player.setTransition(Transition.Fallback) // go back one step and heal
+      } else {
+        player.setTransition(Transition.DoneHealing) // charge
+      }
+    }
+    if (warrior.health() >= 16) {
+      player.setTransition(Transition.DoneHealing)
+    }
+  }
+  Act (warrior, player) {
+    warrior.rest()
+  }
+}
+// Invoked after taking ranged damage
+// This state checks health, and if we have enough we attack, or else we fallback.
+class EscapeState extends FSMState {
+  constructor () {
+    super(StateId.Escaping)
+    this.swapped = false
+    this.player = {}
+  }
+  Reason (warrior, player) {
+    if (warrior.health() >= player.hp) {
+      // we have not taken damage since last turn, safe to stop and heal
+      player.setTransition(Transition.NeedHealing)
+      return
+    }
+  }
+  Act (warrior, player) {
+    if (!this.swapped) {
+      player.swap()
+      this.player = player
+      this.swapped = true
+    }
+    warrior.walk(player.dir)
+    player.step()
+  }
+  DoBeforeEntering () {
+    this.swapped = false
+  }
+  DoBeforeLeaving () {
+    // Swap back
+    if (this.swapped) {
+      this.player.swap()
+    }
+  }
 }
 
-
-export default Player
+export { Player, Transition, StateId }
