@@ -4,7 +4,7 @@
   "description": "",
   "main": "warriorjs",
   "scripts": {
-    "test": "mocha --compilers js:babel-core/register disguy-beginner\\test.js"
+    "test": "mocha --compilers js:babel-core/register test\\*.js"
   },
   "author": "",
   "license": "ISC",

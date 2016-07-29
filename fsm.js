@@ -6,12 +6,14 @@ const Transition = {
   NullTransition: 0,
   FacedEnemy: 1,
   TookRangedDamage: 2,
-  IsDying: 3
+  IsDying: 3,
+  KilledEnemy: 4
 }
 
 // labels for the states
 const StateId = {
-  NullStateId: 0,
+  NullStateId: -1,
+  Walking: 0,
   Resting: 1,
   Attacking: 2,
   Escaping: 3
@@ -32,17 +34,45 @@ class FSM {
       return
     }
     // Ignore duplicates
-    if (this.states.find((s) => s.Id === state.id)) {
+    if (this.states.find((s) => s.Id === state.Id)) {
       return
     }
     this.states.push(state)
   }
+  deleteState (id) {
+    if (id === StateId.NullStateId) {
+      return
+    }
+    this.states = this.states.filter((s) => s.Id !== id)
+  }
+  /*
+  * This method performs the transition from current State to next state, based on transition
+  */
+  performTransition (trans) {
+    if (trans === Transition.NullTransition) {
+      return
+    }
+    const id = this.currentState.GetOutputState(trans)
+    if (id === StateId.NullStateId) {
+      return
+    }
+    // Update currentState
+    this.currentStateId = id
+    const state = this.states.find((s) => s.Id === id)
+    if (state !== undefined) {
+      // Post processing of old state
+      this.currentState.DoBeforeLeaving()
+      this.currentState = state
+      // Reset the state to its desired condition before it can reason or act
+      this.currentState.DoBeforeEntering()
+    }
+  }
 }
 
 class FSMState {
-  constructor () {
+  constructor (stateId) {
     this.map = []
-    this.stateId = 0
+    this.Id = stateId
   }
   addTransition (trans, id) {
     if (trans === Transition.NullTransition) {
@@ -74,7 +104,7 @@ class FSMState {
   GetOutputState (trans) {
     const t = this.map.find((t) => t.Transition === trans)
     if (t !== undefined) {
-      return t.Id
+      return t.Id // state id
     }
     return StateId.NullStateId
   }
