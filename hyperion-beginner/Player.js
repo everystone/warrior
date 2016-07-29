@@ -113,8 +113,9 @@ class Player {
     this.fsm = new FSM()
     this.setupFSM()
     this.hp = 20
-    this.dir = 'backward'
+    this.dir = 'forward'
     this.steps = 0
+    this.pivoted = false
   }
   setTransition (trans) {
     this.fsm.performTransition(trans)
@@ -123,9 +124,12 @@ class Player {
   step () {
     this.steps += 1
   }
-  swap () {
+  swap (resetSteps) {
     this.dir = this.dir === 'forward' ? 'backward' : 'forward'
-    this.steps = 0
+    // warrior.pivot()
+    if (resetSteps) {
+      this.steps = 0
+    }
   }
   setupFSM () {
     const walking = new WalkState()
@@ -165,8 +169,10 @@ class WalkState extends FSMState {
   Act (warrior, player) {
     if (warrior.feel(player.dir).isCaptive()) {
       warrior.rescue(player.dir)
-      player.swap()
       return
+    }
+    if (warrior.feel(player.dir).isWall()) {
+      player.swap(true)
     }
     warrior.walk(player.dir)
     player.step()
@@ -185,12 +191,15 @@ class AttackState extends FSMState {
         return
       }
       player.setTransition(Transition.KilledEnemy)
-    } else if (warrior.feel(player.dir).isWall()) {
-      player.swap()
     }
   }
   Act (warrior, player) {
-    warrior.attack(player.dir)
+    if ((player.dir === 'backward' && !player.pivoted) || (player.dir === 'forward' && player.pivoted)) {
+      warrior.pivot()
+      player.swap(false)
+    } else {
+      warrior.attack(player.dir)
+    }
   }
 }
 class RestState extends FSMState {
@@ -201,7 +210,7 @@ class RestState extends FSMState {
     if (warrior.health() < player.hp) {
       // We have taken damage since last turn, most likely pesky rangers
       // if we have less than 13 hp and there is room to escape
-      if (warrior.health() <= 10 && player.steps >= 2) {
+      if (warrior.health() <= 10 && player.steps >= 1) {
         player.setTransition(Transition.Fallback) // go back one step and heal
       } else {
         player.setTransition(Transition.DoneHealing) // charge
@@ -232,7 +241,7 @@ class EscapeState extends FSMState {
   }
   Act (warrior, player) {
     if (!this.swapped) {
-      player.swap()
+      player.swap(true)
       this.player = player
       this.swapped = true
     }
@@ -245,7 +254,7 @@ class EscapeState extends FSMState {
   DoBeforeLeaving () {
     // Swap back
     if (this.swapped) {
-      this.player.swap()
+      this.player.swap(true)
     }
   }
 }
