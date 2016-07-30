@@ -4,7 +4,8 @@ const Transition = {
   Fallback: 2,
   NeedHealing: 3,
   KilledEnemy: 4,
-  DoneHealing: 5
+  DoneHealing: 5,
+  BeginWalking: 6
 }
 const StateId = {
   NullStateId: -1,
@@ -124,18 +125,23 @@ class Player {
   step () {
     this.steps += 1
   }
+  canEscape (warrior) {
+    let back = this.dir === 'forward' ? 'backward' : 'forward'
+    let distanceToEnemy = warrior.look(this.dir).findIndex((e) => e.isEnemy())
+    let distanceToWall = warrior.look(back).findIndex((e) => e.isWall())
+    return ((distanceToEnemy + distanceToWall) >= 3) || (distanceToWall === -1)
+  }
   swap (resetSteps) {
     this.dir = this.dir === 'forward' ? 'backward' : 'forward'
-    // warrior.pivot()
     if (resetSteps) {
       this.steps = 0
     }
   }
   setupFSM () {
+    const recon = new ReconState()
+    recon.addTransition(Transition.BeginWalking, StateId.Walking)
     const walking = new WalkState()
     walking.addTransition(Transition.FacedEnemy, StateId.Attacking)
-    
-
     const attacking = new AttackState()
     attacking.addTransition(Transition.KilledEnemy, StateId.Walking)
     attacking.addTransition(Transition.NeedHealing, StateId.Resting)
@@ -145,6 +151,7 @@ class Player {
     const escaping = new EscapeState()
     escaping.addTransition(Transition.NeedHealing, StateId.Resting)
 
+    this.fsm.addState(recon)
     this.fsm.addState(walking)
     this.fsm.addState(attacking)
     this.fsm.addState(resting)
@@ -174,6 +181,7 @@ class WalkState extends FSMState {
     if (warrior.feel(player.dir).isWall()) {
       player.swap(true)
     }
+    // default
     warrior.walk(player.dir)
     player.step()
   }
@@ -205,15 +213,17 @@ class AttackState extends FSMState {
 class RestState extends FSMState {
   constructor () {
     super(StateId.Resting)
+    this.quickdraw = true
   }
   Reason (warrior, player) {
     if (warrior.health() < player.hp) {
       // We have taken damage since last turn, most likely pesky rangers
       // if we have less than 13 hp and there is room to escape
-      if (warrior.health() <= 10 && player.steps >= 1) {
+      if (warrior.health() <= 10 && player.canEscape(warrior)) {
         player.setTransition(Transition.Fallback) // go back one step and heal
       } else {
         player.setTransition(Transition.DoneHealing) // charge
+        return
       }
     }
     if (warrior.health() >= 16) {
@@ -221,7 +231,18 @@ class RestState extends FSMState {
     }
   }
   Act (warrior, player) {
-    warrior.rest()
+    // before healing, if there is an enemy nearby, fire one shot just in case of wizards.
+    const captive = warrior.look(player.dir).findIndex((e) => e.isCaptive())
+    const enemy = warrior.look(player.dir).findIndex((e) => e.isEnemy())
+    if (this.quickdraw && enemy >= 0 && ((enemy < captive) || (captive === -1))) {
+      warrior.shoot()
+      this.quickdraw = false
+    } else {
+      warrior.rest()
+    }
+  }
+  DoBeforeEntering () {
+    this.quickdraw = true
   }
 }
 // Invoked after taking ranged damage
@@ -258,5 +279,46 @@ class EscapeState extends FSMState {
     }
   }
 }
+
+// Initial state, recon the level, look for archers.
+class ReconState extends FSMState {
+  constructor () {
+    super(StateId.Recon)
+  }
+  Reason (warrior, player) {
+    const right = warrior.look('forward')
+    const left = warrior.look('backward')
+    for (let i = 0; i < 3; i++) {
+      // check left side
+      if (i >= left.length) {
+        // nothing more to check left side, go right
+        player.setTransition(Transition.BeginWalking)
+        return
+      } else if (i >= right.left) {
+        // nothing more to check right side, go left
+        player.swap(true)
+        player.setTransition(Transition.BeginWalking)
+        return
+      }
+
+      // Check walls, captives and enemies
+      if (left[i].isWall() || left[i].isCaptive() || left[i].isEnemy()) {
+        player.swap(true)
+        player.setTransition(Transition.BeginWalking)
+        return
+      }
+      if (right[i].isWall() || right[i].isCaptive() || right[i].isEnemy()) {
+        player.setTransition(Transition.BeginWalking)
+        return
+      }
+    }
+    // default
+    player.setTransition(Transition.BeginWalking)
+  }
+  Act (warrior, player) {
+
+  }
+}
+
 
 export { Player, Transition, StateId }
